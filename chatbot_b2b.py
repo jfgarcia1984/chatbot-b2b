@@ -8,6 +8,7 @@ def load_data():
     xls = pd.ExcelFile(file_path)
     pedidos = pd.read_excel(xls, sheet_name="Pedidos")
     credenciales = pd.read_excel(xls, sheet_name="Credenciales")
+    credenciales.columns = credenciales.columns.str.strip()  # Eliminar espacios en los nombres de columnas
     return pedidos, credenciales
 
 pedidos_df, credenciales_df = load_data()
@@ -25,7 +26,7 @@ def verificar_contraseña(clave):
         return cliente
     return None
 
-# Mostrar los pedidos del cliente autenticado
+# Mostrar los pedidos del cliente autenticado y habilitar descarga
 if clave_ingresada:
     cliente_autenticado = verificar_contraseña(clave_ingresada)
     
@@ -33,6 +34,23 @@ if clave_ingresada:
         st.success(f"🔓 Acceso concedido. Mostrando pedidos de {cliente_autenticado}.")
         pedidos_cliente = pedidos_df[pedidos_df["Cliente"] == cliente_autenticado]
         st.dataframe(pedidos_cliente)
+
+        # Botón para descargar pedidos en Excel
+        @st.cache_data
+        def generar_excel(df):
+            output = pd.ExcelWriter("pedidos_cliente.xlsx", engine="xlsxwriter")
+            df.to_excel(output, index=False, sheet_name="Pedidos")
+            output.close()
+            return output
+
+        excel = pedidos_cliente.to_excel(index=False, engine="openpyxl")
+        st.download_button(
+            label="📥 Descargar Pedidos en Excel",
+            data=excel,
+            file_name=f"Pedidos_{cliente_autenticado}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
     elif clave_ingresada == "admin123":
         st.success("🔓 Acceso total concedido. Mostrando todos los pedidos.")
         st.dataframe(pedidos_df)
